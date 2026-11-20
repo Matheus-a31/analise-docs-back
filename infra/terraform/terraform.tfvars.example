@@ -1,0 +1,5 @@
+aws_region           = "us-east-1"
+bucket_name          = "jus-digital-documents-seu-nome-2026"
+environment          = "dev"
+force_destroy        = true
+allowed_cors_origins = ["http://localhost:5173"]
