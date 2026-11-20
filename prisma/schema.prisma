@@ -1,0 +1,49 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum AnalysisStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  name      String
+  picture   String?
+  googleId  String     @unique
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("users")
+}
+
+model Document {
+  id             String         @id @default(uuid())
+  title          String
+  originalName   String
+  mimeType       String
+  extension      String
+  sizeBytes      Int
+  s3Key          String
+  s3Url          String
+  instruction    String         @db.Text
+  aiAnalysis     String?        @db.Text
+  analysisStatus AnalysisStatus @default(PENDING)
+  errorMessage   String?        @db.Text
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("documents")
+}
