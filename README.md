@@ -140,10 +140,15 @@ npm run test:e2e
 
 ---
 
-## 8. Endpoints da API
+## 8. Endpoints da API & Documentação Swagger
+
+A documentação interativa OpenAPI/Swagger está disponível em:
+- **Local**: `http://localhost:3000/api/docs`
+- **Produção (AWS EC2)**: `https://3.143.230.43.sslip.io/api/docs`
 
 | Método | Rota | Descrição | Autenticação |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/api/docs` | Interface interativa Swagger (OpenAPI 3.0) | Pública |
 | `GET` | `/api/health` | Healthcheck do serviço | Pública |
 | `POST` | `/api/auth/google` | Login/Cadastro com token Google OAuth 2.0 | Pública |
 | `POST` | `/api/auth/dev-login` | Login rápido de desenvolvimento (`NODE_ENV !== 'production'`) | Pública (Dev) |
