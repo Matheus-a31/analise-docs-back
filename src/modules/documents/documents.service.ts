@@ -144,6 +144,23 @@ export class DocumentsService {
     };
   }
 
+  async getFileContentByUser(
+    id: string,
+    userId: string,
+  ): Promise<{ buffer: Buffer; mimeType: string; originalName: string }> {
+    const document = await this.documentRepository.findByIdAndUserId(id, userId);
+    if (!document) {
+      throw new NotFoundException('Documento não encontrado.');
+    }
+
+    const buffer = await this.storageService.getFileBuffer(document.s3Key);
+    return {
+      buffer,
+      mimeType: document.mimeType || 'application/octet-stream',
+      originalName: document.originalName,
+    };
+  }
+
   async retryAnalysis(id: string, userId: string): Promise<DocumentResponseDto> {
     const document = await this.documentRepository.findByIdAndUserId(id, userId);
     if (!document) {
