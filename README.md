@@ -153,4 +153,23 @@ npm run test:e2e
 | `GET` | `/api/documents/:id` | Retorna detalhes, análise da IA e URL assinada do S3 | Bearer JWT |
 | `POST` | `/api/documents/:id/retry-analysis` | Reprocessa a análise no `gpt-4o-mini` em caso de erro anterior | Bearer JWT |
 | `DELETE` | `/api/documents` | Exclui 1 ou múltiplos documentos (`{ "ids": ["..."] }`) do S3 e do BD | Bearer JWT |
+
+---
+
+## 9. Deploy em Produção na AWS EC2 (Docker + Caddy HTTPS + GitHub Actions)
+
+O repositório já inclui o workflow `.github/workflows/deploy-ec2.yml`, `docker-compose.prod.yml` e `Caddyfile` para deploy contínuo na AWS EC2 (Free Tier `t2.micro`/`t3.micro`) com **HTTPS automático via Let's Encrypt + `sslip.io`**.
+
+### Secrets necessários no GitHub Actions (`Settings > Secrets and variables > Actions`)
+- `EC2_HOST`: `ec2-3-143-230-43.us-east-2.compute.amazonaws.com` (ou IP público)
+- `EC2_USER`: `ec2-user`
+- `EC2_SSH_KEY`: conteúdo completo da chave privada `.pem`
+- `API_DOMAIN`: `<IP_EC2>.sslip.io` (ex: `3.143.230.43.sslip.io`)
+- `FRONTEND_URL`: URL da Vercel (ex: `https://seu-app.vercel.app`)
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OPENAI_API_KEY`
+- `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`
+
+> **Security Group da EC2**: garanta que as portas `22` (SSH), `80` (HTTP - validação Let's Encrypt) e `443` (HTTPS) estejam abertas para `0.0.0.0/0`.
+
 "# analise-docs-back" 
