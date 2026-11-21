@@ -7,10 +7,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
@@ -131,6 +133,32 @@ export class DocumentsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<DocumentResponseDto> {
     return this.documentsService.findOneByUser(id, user.id);
+  }
+
+  @Get(':id/content')
+  @ApiOperation({
+    summary: 'Obter conteúdo binário do documento para pré-visualização',
+    description:
+      'Faz proxy autenticado do arquivo original armazenado na AWS S3 para renderização de prévia real (PDF, imagem, DOCX, TXT) no front-end sem problemas de CORS.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID do documento.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiOkResponse({ description: 'Stream binário do documento retornado com sucesso.' })
+  @ApiNotFoundResponse({ description: 'Documento não encontrado.' })
+  async getContent(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+  ): Promise<void> {
+    const file = await this.documentsService.getFileContentByUser(id, user.id);
+    const safeFilename = encodeURIComponent(file.originalName);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${safeFilename}`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(file.buffer);
   }
 
   @Post(':id/retry-analysis')
