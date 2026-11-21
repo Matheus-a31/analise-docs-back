@@ -28,9 +28,9 @@ export class S3StorageService implements IStorageService {
   private readonly localBucketDir: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET', 'jus-digital-documents');
-    this.endpoint = this.configService.get<string>('AWS_S3_ENDPOINT') || undefined;
+    this.region = this.configService.get<string>('AWS_REGION', 'us-east-1').trim();
+    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET', 'jus-digital-documents').trim();
+    this.endpoint = this.configService.get<string>('AWS_S3_ENDPOINT')?.trim() || undefined;
 
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID', '').trim();
     const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY', '').trim();
