@@ -144,7 +144,7 @@ npm run test:e2e
 
 A documentação interativa OpenAPI/Swagger está disponível em:
 - **Local**: `http://localhost:3000/api/docs`
-- **Produção (AWS EC2)**: `https://3.143.230.43.sslip.io/api/docs`
+
 
 | Método | Rota | Descrição | Autenticação |
 | :--- | :--- | :--- | :--- |
