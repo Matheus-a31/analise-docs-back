@@ -10,6 +10,12 @@ variable "bucket_name" {
   default     = "jus-digital-documents-desafio"
 }
 
+variable "access_logs_bucket_name" {
+  description = "Nome do bucket S3 central de destino para os Server Access Logs"
+  type        = string
+  default     = "jus-digital-s3-access-logs"
+}
+
 variable "environment" {
   description = "Ambiente de execução (dev, staging, prod)"
   type        = string
