@@ -13,77 +13,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Dedicated S3 Bucket for Server Access Logs
-resource "aws_s3_bucket" "access_logs" {
-  bucket        = "${var.bucket_name}-access-logs"
-  force_destroy = var.force_destroy
-
-  tags = {
-    Project     = "JusDigital-DesafioTecnico"
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Purpose     = "S3AccessLogs"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "access_logs_private" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs_encryption" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "access_logs_https_only" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "EnforceHTTPSOnly"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:*"
-        Resource = [
-          aws_s3_bucket.access_logs.arn,
-          "${aws_s3_bucket.access_logs.arn}/*"
-        ]
-        Condition = {
-          Bool = {
-            "aws:SecureTransport" = "false"
-          }
-        }
-      },
-      {
-        Sid    = "AllowS3ServerAccessLogging"
-        Effect = "Allow"
-        Principal = {
-          Service = "logging.s3.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.access_logs.arn}/documents-logs/*"
-        Condition = {
-          ArnLike = {
-            "aws:SourceArn" = aws_s3_bucket.documents.arn
-          }
-        }
-      }
-    ]
-  })
-}
-
 # Main Documents S3 Bucket
 resource "aws_s3_bucket" "documents" {
   bucket        = var.bucket_name
@@ -98,7 +27,7 @@ resource "aws_s3_bucket" "documents" {
 
 resource "aws_s3_bucket_logging" "documents_logging" {
   bucket        = aws_s3_bucket.documents.id
-  target_bucket = aws_s3_bucket.access_logs.id
+  target_bucket = var.access_logs_bucket_name
   target_prefix = "documents-logs/"
 }
 
