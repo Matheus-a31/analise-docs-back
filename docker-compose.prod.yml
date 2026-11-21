@@ -19,7 +19,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: jus_digital_backend_prod
     restart: unless-stopped
     depends_on:
       postgres:
