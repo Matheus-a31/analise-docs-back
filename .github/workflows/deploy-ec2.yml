@@ -1,0 +1,108 @@
+name: Deploy Backend to AWS EC2
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build & Test Before Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jus_digital?schema=public
+
+      - name: Build NestJS application
+        run: npm run build
+
+      - name: Run Unit & E2E Tests
+        run: npm run test && npm run test:e2e
+
+  deploy:
+    name: Deploy to AWS EC2 (Docker + Caddy HTTPS)
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync project files to EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" "mkdir -p ~/jus-digital-backend"
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude '.env' \
+            --exclude '*.pem' \
+            -e "ssh -i ~/.ssh/ec2_key.pem" \
+            ./ "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/jus-digital-backend/"
+
+      - name: Write production .env and start containers on EC2
+        env:
+          API_DOMAIN: ${{ secrets.API_DOMAIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" 'bash -s' << EOF
+          set -e
+          cd ~/jus-digital-backend
+          cat > .env << 'ENVEOF'
+          PORT=3000
+          NODE_ENV=production
+          API_DOMAIN=$API_DOMAIN
+          FRONTEND_URL=$FRONTEND_URL
+          POSTGRES_USER=$POSTGRES_USER
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          POSTGRES_DB=$POSTGRES_DB
+          DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:5432/$POSTGRES_DB?schema=public"
+          JWT_SECRET="$JWT_SECRET"
+          JWT_EXPIRES_IN="7d"
+          GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+          GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+          ENABLE_DEV_LOGIN="false"
+          OPENAI_API_KEY="$OPENAI_API_KEY"
+          OPENAI_MODEL="gpt-4o-mini"
+          AWS_REGION="$AWS_REGION"
+          AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+          AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+          AWS_S3_BUCKET="$AWS_S3_BUCKET"
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' .env
+          docker compose -f docker-compose.prod.yml up -d --build
+          docker image prune -f
+          EOF
