@@ -103,6 +103,8 @@ jobs:
           AWS_S3_BUCKET="$AWS_S3_BUCKET"
           ENVEOF
           sed -i 's/^[[:space:]]*//' .env
-          docker compose -f docker-compose.prod.yml up -d --build
+          docker rm -f $(docker ps -aq --filter "name=jus_digital_backend_prod") 2>/dev/null || true
+          docker compose -f docker-compose.prod.yml rm -sf backend || true
+          docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
           docker image prune -f
           EOF
